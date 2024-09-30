@@ -1,0 +1,2 @@
+pymeterbus>=0.8.4
+paho-mqtt>=2.1.0

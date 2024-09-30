@@ -1,9 +1,21 @@
 import binascii
 import struct
 
-def decode_abb_telegram(telegram, key):
-    """Decode a telegram from an ABB meter."""  
-        
+def decode_abb_telegram1(telegram):
+    """Decode a telegram1 from an ABB meter."""
+    energy_total = round(struct.unpack('<Q', telegram[22:28] + b'\x00\x00')[0] / 1000, 3)
+
+    data = {
+      "energy_total": {
+        "name": "Energy, total",
+        "value": energy_total,
+      },
+    }
+
+    return data
+
+def decode_abb_telegram2(telegram):
+    """Decode a telegram2 from an ABB meter."""
     """Information"""
     serial_number = binascii.hexlify(telegram[7:11]).decode('utf-8')
     version = int(telegram[13])
@@ -34,7 +46,6 @@ def decode_abb_telegram(telegram, key):
     energy_l1 = round(struct.unpack('<Q', telegram[171:177] + b'\x00\x00')[0] / 1000, 3)
     energy_l2 = round(struct.unpack('<Q', telegram[182:188] + b'\x00\x00')[0] / 1000, 3)
     energy_l3 = round(struct.unpack('<Q', telegram[193:199] + b'\x00\x00')[0] / 1000, 3)
-    energy_total = energy_l1 + energy_l2 + energy_l3
 
     data = {
         "metadata": {
@@ -95,10 +106,6 @@ def decode_abb_telegram(telegram, key):
           "name": "Current, L3",
           "value": current_l3,
         },
-        "energy_total": {
-          "name": "Energy, total",
-          "value": energy_total,
-        },
         "energy_l1": {
           "name": "Energy, L1",
           "value": energy_l1,
@@ -113,7 +120,4 @@ def decode_abb_telegram(telegram, key):
         }
     }
 
-    if key is None:
-        return data
-    else:
-      return data[key]
+    return data

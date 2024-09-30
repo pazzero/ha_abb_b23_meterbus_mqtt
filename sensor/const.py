@@ -5,8 +5,8 @@ CONF_METER_ADDRESS = "1"
 CONF_POLLING_RATE = 60
 CONF_MAX_TIMEOUT = 300
 
-MQTT_BROKER = "172.17.1.2"
+MQTT_BROKER = "your mqtt broker"
 MQTT_PORT = 1883
-MQTT_USER = "hassio"
-MQTT_PASSWORD = "RshxJp2zd6"
+MQTT_USER = "username"
+MQTT_PASSWORD = "password"
 MQTT_TOPIC = "homeassistant/sensor/abb_b23_mbus"

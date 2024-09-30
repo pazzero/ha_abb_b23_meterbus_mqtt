@@ -10,10 +10,10 @@ import sys
 from paho.mqtt import client as mqtt
 
 from const import DOMAIN, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, MQTT_TOPIC, CONF_DEVICE, CONF_BAUDRATE, CONF_METER_ADDRESS, CONF_POLLING_RATE, CONF_MAX_TIMEOUT
-from decode import decode_abb_telegram
+from decode import decode_abb_telegram1, decode_abb_telegram2
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 _LOGGER = logging.getLogger(__name__)
 
 # MQTT Client Setup
@@ -75,7 +75,16 @@ async def mbus_fetch_data(device, baudrate, meter_address):
 
         """Establish M-Bus connection"""
         mbus = serial.serial_for_url(device, baudrate, 8, 'E', 1, inter_byte_timeout=ibt, timeout=1)
+
+        """Send REQ_UD telegram to the meter"""
+        req_bytes = bytearray([0x10, 0x5B, 0x01, 0x5C, 0x16])
+        meterbus.send_request_frame(mbus, meter_address, req_bytes)
+        _LOGGER.debug(f"Sent REQ_UD telegram to the meter")
         
+        """Receive RES_UD response from the meter"""
+        telegram1 = decode_abb_telegram1(meterbus.recv_frame(mbus, meterbus.FRAME_DATA_LENGTH))
+        _LOGGER.debug(f"Received telegram1 from meter: {telegram1}")
+
         """Send REQ_UD2 telegram to the meter"""
         req_bytes = bytearray([0x10, 0x7B, 0x01, 0x7C, 0x16])
         meterbus.send_request_frame(mbus, meter_address, req_bytes)
@@ -85,12 +94,14 @@ async def mbus_fetch_data(device, baudrate, meter_address):
         time.sleep(2)
 
         """Receive RES_UD response from the meter"""
-        telegram = meterbus.recv_frame(mbus, meterbus.FRAME_DATA_LENGTH)
-        _LOGGER.debug(f"Received telegram from meter: {telegram}")
+        telegram2 = decode_abb_telegram2(meterbus.recv_frame(mbus, meterbus.FRAME_DATA_LENGTH))
+        _LOGGER.debug(f"Received telegram2 from meter: {telegram2}")
 
-        """Decode the received telegram"""
-        data = decode_abb_telegram(telegram, None)
+        """Merge the telegrams"""
+        data = dict(telegram1, **telegram2)
+
         last_successful_read = time.time()
+
         return data
     except Exception as e:
         _LOGGER.error(f"Error fetching data from meter: {e}")

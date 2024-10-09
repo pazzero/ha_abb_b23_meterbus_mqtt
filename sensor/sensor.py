@@ -13,13 +13,12 @@ from const import DOMAIN, MQTT_BROKER, MQTT_PORT, MQTT_USER, MQTT_PASSWORD, MQTT
 from decode import decode_abb_telegram1, decode_abb_telegram2
 
 # Configure logging
-# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 _LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 # MQTT Client Setup
-# client_id = f'abb_b23_mbus-{random.randint(0, 1000)}'
-# client = mqtt.Client(client_id)
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+client_id = f'abb_b23_mbus-{random.randint(0, 1000)}'
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
 
 # Global variables for health checks
 last_successful_read = 0
@@ -62,7 +61,7 @@ async def mqtt_publish_sensor_data(mqtt_client, topic, payload):
     
     if mqtt_connected:
         _LOGGER.info(f"Publishing sensor data to MQTT topic {topic}")
-        mqtt_client.publish(topic, json.dumps(payload))
+        mqtt_client.publish(topic, json.dumps(payload), retain=True)
     else:
         _LOGGER.error("Failed to publish data: MQTT not connected")
 
@@ -80,6 +79,9 @@ async def mbus_fetch_data(device, baudrate, meter_address):
         req_bytes = bytearray([0x10, 0x5B, 0x01, 0x5C, 0x16])
         meterbus.send_request_frame(mbus, meter_address, req_bytes)
         _LOGGER.debug(f"Sent REQ_UD telegram to the meter")
+
+        """Wait for the meter to respond"""
+        time.sleep(1)
         
         """Receive RES_UD response from the meter"""
         telegram1 = decode_abb_telegram1(meterbus.recv_frame(mbus, meterbus.FRAME_DATA_LENGTH))

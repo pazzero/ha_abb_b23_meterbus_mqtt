@@ -1,9 +1,26 @@
 import binascii
 import struct
 
+def decode_bcd(bcd_data):
+        val = 0
+
+        i = len(bcd_data)
+        while i > 0:
+            val = (val * 10)
+            if bcd_data[i-1]>>4 < 0xA:
+                val += ((bcd_data[i-1]>>4) & 0xF)
+            val = (val * 10) + ( bcd_data[i-1] & 0xF)
+
+            i -= 1
+
+        if(bcd_data[len(bcd_data)-1]>>4 == 0xF):
+            val *= -1
+
+        return val
+
 def decode_abb_telegram1(telegram):
     """Decode a telegram1 from an ABB meter."""
-    energy_total = round(struct.unpack('<Q', telegram[22:28] + b'\x00\x00')[0] / 1000, 3)
+    energy_total = round(decode_bcd(telegram[22:28]) / 100, 2)
 
     data = {
       "energy_total": {
@@ -37,15 +54,18 @@ def decode_abb_telegram2(telegram):
     voltage_l3_l2 = round(struct.unpack('<i', telegram[99:103])[0] * 0.1, 3)
     voltage_l1_l3 = round(struct.unpack('<i', telegram[109:113])[0] * 0.1, 3)
 
+    """Frequency"""
+    frequency = round(decode_bcd(telegram[147:149]) / 100, 2)
+
     """Current"""
     current_l1 = round(struct.unpack('<i', telegram[119:123])[0] * 0.01, 3)
     current_l2 = round(struct.unpack('<i', telegram[129:133])[0] * 0.01, 3)
     current_l3 = round(struct.unpack('<i', telegram[139:143])[0] * 0.01, 3)
 
     """Energy"""
-    energy_l1 = round(struct.unpack('<Q', telegram[171:177] + b'\x00\x00')[0] / 1000, 3)
-    energy_l2 = round(struct.unpack('<Q', telegram[182:188] + b'\x00\x00')[0] / 1000, 3)
-    energy_l3 = round(struct.unpack('<Q', telegram[193:199] + b'\x00\x00')[0] / 1000, 3)
+    energy_l1 = round(decode_bcd(telegram[171:177]) / 100, 2)
+    energy_l2 = round(decode_bcd(telegram[182:188]) / 100, 2)
+    energy_l3 = round(decode_bcd(telegram[193:199]) / 100, 2)
 
     data = {
         "metadata": {
@@ -93,6 +113,11 @@ def decode_abb_telegram2(telegram):
         "voltage_l1_l3": {
           "name": "Voltage, L1-L3",
           "value": voltage_l1_l3,
+        },
+        "frequency": {
+          "name": "Frequency",
+          "value": frequency,
+          "unit_of_measurement": "Hz"
         },
         "current_l1": {
           "name": "Current, L1",
